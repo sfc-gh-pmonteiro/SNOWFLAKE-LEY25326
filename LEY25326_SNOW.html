@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Ley 25.326 + Snowflake: Guia de Cumplimiento</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-10-02",
+    "intent": "Step-by-step Argentina Ley 25.326 compliance training using Snowflake governance features: tags, masking policies, row access policies, classification, and audit",
+    "sections": [
+      { "id": "mod1", "title": "Module 1 - Ley 25.326 Foundations", "producerNotes": "Conceptual overview, no queries" },
+      { "id": "mod2", "title": "Module 2 - Governance Infrastructure", "producerNotes": "DDL for governance database, schemas, roles" },
+      { "id": "mod3", "title": "Module 3 - Data Discovery", "producerNotes": "CLASSIFY function and system tags" },
+      { "id": "mod4", "title": "Module 4 - Custom Tags", "producerNotes": "Ley 25.326-specific tags with ALLOWED_VALUES" },
+      { "id": "mod5", "title": "Module 5 - Masking Policies", "producerNotes": "Dynamic masking for DNI, email, phone; tag-based masking" },
+      { "id": "mod6", "title": "Module 6 - Row Access Policies", "producerNotes": "Purpose limitation via RAP" },
+      { "id": "mod7", "title": "Module 7 - Projection Policies", "producerNotes": "Data minimization via projection control" },
+      { "id": "mod8", "title": "Module 8 - Data Subject Rights (ARCO)", "producerNotes": "ARCO stored procedures" },
+      { "id": "mod9", "title": "Module 9 - Monitoring and Audit", "producerNotes": "ACCESS_HISTORY, alerts, compliance reports" }
+    ]
+  }
+  </script>
+  <link rel="stylesheet" href="/libs/highlight.js@11.10.0/github.min.css" />
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      margin: 0; padding: 0;
+      color: light-dark(#1e293b, #e2e8f0);
+      background: light-dark(#ffffff, #0f172a);
+      line-height: 1.65;
+    }
+    h1, h2, h3, h4 { color: light-dark(#0f172a, #f1f5f9); line-height: 1.3; }
+    h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin-top: 0; }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); border-bottom: 2px solid light-dark(#29b5e8, #29b5e8); padding-bottom: 6px; margin-top: 2.5rem; }
+    h3 { font-size: clamp(1.1rem, 2.5vw, 1.3rem); margin-top: 1.8rem; }
+    a { color: light-dark(#2563eb, #60a5fa); }
+    img, svg { max-width: 100%; height: auto; }
+    hr { border: none; border-top: 1px solid light-dark(#e2e8f0, #334155); margin: 2rem 0; }
+    .header-bar {
+      background: linear-gradient(135deg, #29b5e8, #1b6ff0);
+      color: #fff; padding: clamp(20px, 4vw, 40px); border-radius: 12px;
+      margin-bottom: 2rem; text-align: center;
+    }
+    .header-bar h1 { color: #fff; border: none; margin: 0; font-size: clamp(1.5rem, 4vw, 2rem); }
+    .header-bar p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
+    .header-bar .subtitle { font-size: clamp(1rem, 2.5vw, 1.2rem); font-weight: 500; }
+    :root { --sidebar-width: 270px; }
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar-width); height: 100vh;
+      overflow-y: auto;
+      background: light-dark(#1e293b, #0c1222);
+      color: #cbd5e1;
+      padding: 20px 14px; z-index: 100;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+    .sidebar .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; padding-bottom: 14px;
+      border-bottom: 1px solid #334155;
+    }
+    .sidebar .logo-icon {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: linear-gradient(135deg, #29b5e8, #1b6ff0);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0;
+    }
+    .sidebar .logo span { font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3; }
+    .sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+    .sidebar nav > ul > li { margin-bottom: 2px; }
+    .sidebar nav a {
+      display: block; padding: 5px 10px;
+      color: #94a3b8; text-decoration: none;
+      font-size: 12.5px; border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .sidebar nav a:hover { color: #fff; background: #334155; }
+    .sidebar nav a.active { color: #29b5e8; background: rgba(41,181,232,0.1); }
+    .sidebar nav .section-title {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #64748b;
+      padding: 10px 10px 3px; font-weight: 600;
+    }
+    .main {
+      margin-left: var(--sidebar-width);
+      max-width: 960px; width: 100%;
+      padding: clamp(16px, 4vw, 32px);
+    }
+    @media (max-width: 900px) {
+      .sidebar { width: 100%; height: auto; position: relative; }
+      .main { margin-left: 0; }
+    }
+    @media print {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 20px; }
+    }
+    .module-badge {
+      display: inline-block;
+      background: light-dark(#dbeafe, #1e3a5f);
+      color: light-dark(#1e40af, #93c5fd);
+      font-size: 0.75rem; font-weight: 700;
+      padding: 2px 10px; border-radius: 12px;
+      margin-right: 8px; vertical-align: middle;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .ley-ref {
+      display: inline-block;
+      background: light-dark(#fef3c7, #422006);
+      color: light-dark(#92400e, #fbbf24);
+      font-size: 0.72rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px;
+      margin-left: 6px;
+    }
+    .info-box {
+      background: light-dark(#eff6ff, #1e293b);
+      border-left: 4px solid #29b5e8;
+      padding: 14px 18px; border-radius: 0 8px 8px 0;
+      margin: 16px 0; font-size: 0.92rem;
+    }
+    .info-box.warn { border-left-color: #f59e0b; background: light-dark(#fffbeb, #1c1917); }
+    .info-box.success { border-left-color: #22c55e; background: light-dark(#f0fdf4, #14532d); }
+    .info-box strong { display: block; margin-bottom: 4px; }
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+    th, td { border: 1px solid light-dark(#d1d5db, #374151); padding: 8px 12px; text-align: left; }
+    th { background: light-dark(#f1f5f9, #1e293b); font-weight: 600; }
+    tr:nth-child(even) { background: light-dark(#f8fafc, #0f172a33); }
+    pre {
+      background: light-dark(#1e293b, #0f172a);
+      color: #e2e8f0;
+      padding: 16px; border-radius: 8px;
+      overflow-x: auto; font-size: 0.82rem;
+      line-height: 1.5; margin: 12px 0;
+      border: 1px solid light-dark(#334155, #1e293b);
+    }
+    pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+    code {
+      background: light-dark(#f1f5f9, #1e293b);
+      padding: 2px 6px; border-radius: 4px;
+      font-size: 0.85em;
+    }
+    details {
+      border: 1px solid light-dark(#e2e8f0, #334155);
+      border-radius: 8px; margin: 12px 0; padding: 0;
+    }
+    details summary {
+      padding: 12px 16px; cursor: pointer; font-weight: 600;
+      background: light-dark(#f8fafc, #1e293b); border-radius: 8px;
+      list-style: none; display: flex; align-items: center; gap: 8px;
+    }
+    details summary::before { content: '\25B6'; font-size: 0.7rem; transition: transform 0.2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    details summary::-webkit-details-marker { display: none; }
+    details > div { padding: 4px 16px 16px; }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #29b5e8; color: #fff; font-weight: 700;
+      font-size: 0.82rem; margin-right: 8px; flex-shrink: 0;
+    }
+    .diagram-wrap { overflow-x: auto; margin: 16px 0; text-align: center; }
+    .glossary-term { font-weight: 700; color: light-dark(#1e40af, #93c5fd); }
+    .back-to-top { display: none; }
+    footer {
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 1px solid light-dark(#e2e8f0, #334155);
+      font-size: 0.82rem; color: light-dark(#64748b, #94a3b8);
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      pre { font-size: 0.75rem; padding: 12px; }
+      th, td { padding: 6px 8px; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">L</div>
+    <span>Ley 25.326 + Snowflake</span>
+  </div>
+  <nav><ul>
+    <li><div class="section-title">Fundamentos</div></li>
+    <li><a href="#mod1">1. Fundamentos de la Ley 25.326</a></li>
+    <li><div class="section-title">Implementacion</div></li>
+    <li><a href="#mod2">2. Gobernanza y RBAC</a></li>
+    <li><a href="#mod3">3. Clasificacion de Datos</a></li>
+    <li><a href="#mod4">4. Tags Personalizados</a></li>
+    <li><a href="#mod5">5. Enmascaramiento Dinamico</a></li>
+    <li><a href="#mod6">6. Row Access Policies</a></li>
+    <li><a href="#mod7">7. Projection Policies</a></li>
+    <li><div class="section-title">Operacion</div></li>
+    <li><a href="#mod8">8. Derechos del Titular (ARCO)</a></li>
+    <li><a href="#mod9">9. Auditoria y Cumplimiento</a></li>
+    <li><div class="section-title">Referencia</div></li>
+    <li><a href="#glossary">Glosario Ley 25.326</a></li>
+    <li><a href="#ref-table">Ley 25.326 &rarr; Snowflake</a></li>
+  </ul></nav>
+</aside>
+
+<main class="main" id="top">
+
+<div class="header-bar">
+  <p class="subtitle">Entrenamiento Paso a Paso</p>
+  <h1>Ley 25.326 + Snowflake</h1>
+  <p>Guia Completa de Cumplimiento con la Ley de Proteccion de los Datos Personales de Argentina usando Snowflake</p>
+  <p style="margin-top:12px; font-size:0.82rem; opacity:0.75;">Ley 25.326 de 30 de octubre de 2000 &bull; Ley de Habeas Data &bull; Snowflake Enterprise Edition+ &bull; 9 Modulos</p>
+</div>
+
+<!-- MODULE 1 -->
+<h2 id="mod1"><span class="module-badge">Modulo 1</span> Fundamentos de la Ley 25.326 y Arquitectura Snowflake <span class="ley-ref">Arts. 1-4</span></h2>
+
+<h3>Que es la Ley 25.326?</h3>
+<p>La <strong>Ley 25.326 de 30 de octubre de 2000</strong>, conocida como <strong>Ley de Habeas Data</strong>, es la normativa argentina de proteccion de datos personales. Fue pionera en America Latina y esta basada en el articulo 43 de la Constitucion Nacional. Regula la formacion, almacenamiento y tratamiento de datos personales en archivos, registros y bancos de datos publicos y privados. La <strong>AAIP (Agencia de Acceso a la Informacion Publica)</strong> es el organo de control encargado de fiscalizar su cumplimiento.</p>
+
+<h3>Conceptos fundamentales (Art. 2)</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Termino Ley 25.326</th><th>Definicion</th><th>Equivalente Snowflake</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Dato Personal</strong></td><td>Informacion de cualquier tipo referida a personas fisicas o de existencia ideal determinadas o determinables</td><td>Columnas clasificadas como NAME, EMAIL, PHONE_NUMBER, etc.</td></tr>
+    <tr><td><strong>Dato Sensible</strong></td><td>Datos que revelan origen racial/etnico, opiniones politicas, convicciones religiosas, filosoficas o morales, afiliacion sindical, salud o vida sexual</td><td>Columnas clasificadas como ETHNICITY, GENDER</td></tr>
+    <tr><td><strong>Titular de los Datos</strong></td><td>Persona fisica o de existencia ideal cuyos datos son objeto de tratamiento</td><td>Registro (row) en la tabla de datos</td></tr>
+    <tr><td><strong>Responsable del Archivo</strong></td><td>Persona fisica o de existencia ideal titular de un archivo, registro o banco de datos</td><td>Propietario del Snowflake Account</td></tr>
+    <tr><td><strong>Usuario de Datos</strong></td><td>Persona que realiza el tratamiento de datos en archivos propios o de terceros (Art. 2)</td><td>Roles/usuarios con acceso a los datos</td></tr>
+    <tr><td><strong>Tratamiento</strong></td><td>Operaciones sistematicas que permiten recoleccion, conservacion, modificacion, evaluacion, bloqueo o destruccion de datos</td><td>Queries, ETL, transformaciones en Snowflake</td></tr>
+    <tr><td><strong>Disociacion de Datos</strong></td><td>Tratamiento de datos de manera que la informacion no pueda asociarse a persona determinada o determinable</td><td>Anonimizacion / masking irreversible</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Principios del Tratamiento (Art. 4 - Calidad de los Datos)</h3>
+<p>La Ley 25.326 establece principios rectores en su Art. 4 que se implementan en Snowflake:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Principio</th><th>Implementacion Snowflake</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Licitud</strong> &mdash; archivos inscriptos, operacion conforme a la ley (Art. 3)</td><td>Governance DB + Tags de metadatos</td></tr>
+    <tr><td>2</td><td><strong>Pertinencia</strong> &mdash; datos adecuados, pertinentes y no excesivos (Art. 4.1)</td><td>Projection Policies + Masking Policies</td></tr>
+    <tr><td>3</td><td><strong>Finalidad</strong> &mdash; no usar para fines distintos a los que motivaron la recoleccion (Art. 4.3)</td><td>Tag LEY25326_FINALIDAD + Row Access Policy</td></tr>
+    <tr><td>4</td><td><strong>Exactitud</strong> &mdash; datos exactos y actualizados (Art. 4.4)</td><td>Procedimiento ARCO_CORRECTION</td></tr>
+    <tr><td>5</td><td><strong>Seguridad</strong> &mdash; medidas tecnicas y organizativas (Art. 9)</td><td>RBAC, Encryption, Masking, RAP</td></tr>
+    <tr><td>6</td><td><strong>Confidencialidad</strong> &mdash; deber de secreto profesional (Art. 10)</td><td>Masking Policies, Row Access Policies</td></tr>
+    <tr><td>7</td><td><strong>Destruccion</strong> &mdash; datos destruidos cuando innecesarios (Art. 4.7)</td><td>Tag LEY25326_RETENCION + Procedimiento ARCO_DELETE</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Bases Legales para el Tratamiento (Art. 5)</h3>
+<p>La Ley 25.326 requiere consentimiento como regla general (Art. 5.1). Las excepciones al consentimiento estan en Art. 5.2:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Base Legal</th><th>Articulo</th><th>Tag Value</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Consentimiento libre, expreso e informado</td><td>Art. 5.1</td><td><code>CONSENTIMIENTO</code></td></tr>
+    <tr><td>2</td><td>Fuentes de acceso publico irrestricto</td><td>Art. 5.2.a</td><td><code>FUENTE_PUBLICA</code></td></tr>
+    <tr><td>3</td><td>Funciones del Estado u obligacion legal</td><td>Art. 5.2.b</td><td><code>OBLIGACION_LEGAL</code></td></tr>
+    <tr><td>4</td><td>Listados publicos (nombre, DNI, ocupacion, etc.)</td><td>Art. 5.2.c</td><td><code>LISTADOS_PUBLICOS</code></td></tr>
+    <tr><td>5</td><td>Relacion contractual, cientifica o profesional</td><td>Art. 5.2.d</td><td><code>RELACION_CONTRACTUAL</code></td></tr>
+    <tr><td>6</td><td>Operaciones de entidades financieras</td><td>Art. 5.2.e</td><td><code>OPERACIONES_FINANCIERAS</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Pre-requisitos Snowflake</h3>
+<div class="info-box">
+  <strong>Requisitos Minimos</strong>
+  <ul style="margin:4px 0 0; padding-left:18px;">
+    <li><strong>Snowflake Enterprise Edition</strong> (o superior) &mdash; obligatorio para Tags, Masking Policies, Row Access Policies y Classification</li>
+    <li><strong>Region recomendada:</strong> <code>aws-sa-east-1</code> (AWS Sao Paulo) &mdash; region mas cercana a Argentina disponible en Snowflake</li>
+    <li>Encriptacion: AES-256 en reposo, TLS 1.2+ en transito (estandar Snowflake)</li>
+    <li>Time Travel (hasta 90 dias) y Fail-safe (7 dias) para proteccion continua</li>
+  </ul>
+</div>
+
+<h3>Arquitectura de Gobernanza</h3>
+<div class="diagram-wrap">
+  <pre class="mermaid">
+graph TB
+  subgraph account ["Snowflake Account"]
+    subgraph govDB ["LEY25326_GOVERNANCE Database"]
+      TAGS["TAGS Schema - Tags personalizados Ley 25.326"]
+      POLICIES["POLICIES Schema - Masking + Row Access"]
+      AUDIT["AUDIT Schema - ARCO Log + Procedures"]
+    end
+    subgraph roles ["Jerarquia de Roles"]
+      ACCTADMIN["ACCOUNTADMIN"]
+      RESP["LEY25326_RESPONSABLE_DATOS"]
+      PRIV["LEY25326_PRIVACY_ADMIN"]
+      STEW["LEY25326_DATA_STEWARD"]
+      ANALYST["LEY25326_ANALYST"]
+      ACCTADMIN --> RESP
+      RESP --> PRIV
+      RESP --> STEW
+      PRIV --> ANALYST
+    end
+    subgraph dataDB ["Databases de Negocio"]
+      CUST["Tablas con Datos Personales"]
+    end
+  end
+  TAGS -.->|"tag-based masking"| CUST
+  POLICIES -.->|"proteccion"| CUST
+  AUDIT -.->|"auditoria"| CUST
+  </pre>
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 2 -->
+<h2 id="mod2"><span class="module-badge">Modulo 2</span> Infraestructura de Gobernanza y RBAC <span class="ley-ref">Arts. 9, 10, 21</span></h2>
+
+<p>En este modulo, creamos la infraestructura centralizada de gobernanza: un database dedicado, schemas para tags/politicas/auditoria, y roles especificos para Ley 25.326.</p>
+
+<div class="info-box warn">
+  <strong>Configuracion Inicial</strong>
+  Antes de ejecutar cualquier modulo, defina las variables abajo con su usuario y email. Estas variables se usan a lo largo de todo el entrenamiento.
+</div>
+
+<h3><span class="step-num">0</span> Configurar Variables del Entrenamiento</h3>
+<pre><code class="language-sql">SET LEY25326_USER      = '&lt;SU_USUARIO&gt;';          -- Ej: 'JGARCIA'
+SET LEY25326_DPO_EMAIL = '&lt;SU_EMAIL&gt;';            -- Ej: 'datos@empresa.com.ar'</code></pre>
+
+<h3><span class="step-num">1</span> Crear Database, Schemas y Warehouse</h3>
+<pre><code class="language-sql">USE ROLE SYSADMIN;
+
+CREATE DATABASE IF NOT EXISTS LEY25326_GOVERNANCE
+  COMMENT = 'Database centralizado para gobernanza Ley 25.326 Argentina';
+
+CREATE SCHEMA IF NOT EXISTS LEY25326_GOVERNANCE.TAGS
+  COMMENT = 'Tags customizados para clasificacion Ley 25.326';
+
+CREATE SCHEMA IF NOT EXISTS LEY25326_GOVERNANCE.POLICIES
+  COMMENT = 'Masking policies y Row Access Policies';
+
+CREATE SCHEMA IF NOT EXISTS LEY25326_GOVERNANCE.AUDIT
+  COMMENT = 'Logs de ARCO, procedimientos y alertas';
+
+CREATE WAREHOUSE IF NOT EXISTS LEY25326_TRAINING_WH
+  WAREHOUSE_SIZE = 'X-SMALL'
+  AUTO_SUSPEND = 60
+  AUTO_RESUME = TRUE
+  COMMENT = 'Warehouse dedicado para entrenamiento Ley 25.326';</code></pre>
+
+<h3><span class="step-num">2</span> Crear Roles Especificos para Ley 25.326</h3>
+<pre><code class="language-sql">USE ROLE USERADMIN;
+
+-- Responsable de Proteccion de Datos - Art. 2
+CREATE ROLE IF NOT EXISTS LEY25326_RESPONSABLE_DATOS
+  COMMENT = 'Responsable de Proteccion de Datos - Art. 2 Ley 25.326';
+
+CREATE ROLE IF NOT EXISTS LEY25326_PRIVACY_ADMIN
+  COMMENT = 'Crea y gestiona masking policies y row access policies';
+
+CREATE ROLE IF NOT EXISTS LEY25326_DATA_STEWARD
+  COMMENT = 'Aplica tags Ley 25.326 y monitorea cumplimiento';
+
+CREATE ROLE IF NOT EXISTS LEY25326_ANALYST
+  COMMENT = 'Acceso a datos con enmascaramiento aplicado';
+
+-- Jerarquia de roles
+GRANT ROLE LEY25326_PRIVACY_ADMIN TO ROLE LEY25326_RESPONSABLE_DATOS;
+GRANT ROLE LEY25326_DATA_STEWARD  TO ROLE LEY25326_RESPONSABLE_DATOS;
+GRANT ROLE LEY25326_ANALYST       TO ROLE LEY25326_PRIVACY_ADMIN;</code></pre>
+
+<h3><span class="step-num">3</span> Conceder Privilegios de Gobernanza</h3>
+<pre><code class="language-sql">USE ROLE ACCOUNTADMIN;
+
+-- Privilegios completos para tags, policies, audit y warehouse
+-- (ver LEY25326_SNOW.sql para el listado completo de GRANT statements)</code></pre>
+
+<div class="info-box success">
+  <strong>Resultado Esperado</strong>
+  El role LEY25326_RESPONSABLE_DATOS debe heredar los privilegios de LEY25326_PRIVACY_ADMIN y LEY25326_DATA_STEWARD, teniendo vision completa de la gobernanza a traves del Snowsight Governance Dashboard.
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 3 -->
+<h2 id="mod3"><span class="module-badge">Modulo 3</span> Descubrimiento y Clasificacion de Datos <span class="ley-ref">Arts. 2, 7</span></h2>
+
+<p>Antes de proteger datos personales, es necesario saber <strong>donde estan</strong>. Snowflake ofrece clasificacion automatica que identifica PII y datos sensibles.</p>
+
+<h3><span class="step-num">1</span> Crear Datos de Ejemplo (Para Entrenamiento)</h3>
+<pre><code class="language-sql">USE ROLE SYSADMIN;
+CREATE DATABASE IF NOT EXISTS EMPRESA_DEMO_AR;
+CREATE SCHEMA IF NOT EXISTS EMPRESA_DEMO_AR.DATOS_CLIENTES;
+
+CREATE OR REPLACE TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES (
+  ID               NUMBER AUTOINCREMENT PRIMARY KEY,
+  NOMBRE           STRING    COMMENT 'Nombre completo del titular',
+  DNI              STRING    COMMENT 'Documento Nacional de Identidad',
+  EMAIL            STRING    COMMENT 'Direccion de correo electronico',
+  TELEFONO         STRING    COMMENT 'Telefono movil con codigo de pais',
+  FECHA_NACIMIENTO DATE      COMMENT 'Fecha de nacimiento',
+  DIRECCION        STRING    COMMENT 'Direccion residencial',
+  LOCALIDAD        STRING    COMMENT 'Localidad de residencia',
+  PROVINCIA        STRING    COMMENT 'Provincia',
+  GENERO           STRING    COMMENT 'Dato personal sensible (Art. 7)',
+  ETNIA            STRING    COMMENT 'Dato personal sensible (Art. 7)',
+  DEPARTAMENTO     STRING    COMMENT 'Departamento interno',
+  FECHA_REGISTRO   TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+INSERT INTO EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+  (NOMBRE, DNI, EMAIL, TELEFONO, FECHA_NACIMIENTO, DIRECCION, LOCALIDAD, PROVINCIA, GENERO, ETNIA, DEPARTAMENTO)
+VALUES
+  ('Lucia Martinez',     '25.678.901', 'lucia.martinez@email.com.ar',    '+54 9 11 1234 5678', '1990-03-15',
+   'Av. Santa Fe 1234, Piso 3B', 'Palermo', 'Buenos Aires', 'Femenino', 'Mestiza', 'RRHH'),
+  ('Martin Lopez',       '30.456.789', 'martin.lopez@email.com.ar',      '+54 9 351 2345 6789','1985-07-22',
+   'Calle Dean Funes 567', 'Centro', 'Cordoba', 'Masculino', 'Blanca', 'FINANZAS'),
+  ('Camila Rodriguez',   '35.901.234', 'camila.rodriguez@email.com.ar',  '+54 9 261 3456 7890','1992-11-08',
+   'Av. San Martin 890', 'Ciudad', 'Mendoza', 'Femenino', 'Negra', 'MARKETING'),
+  ('Santiago Fernandez', '22.345.678', 'santiago.f@empresa.com.ar',      '+54 9 341 4567 8901','1988-01-30',
+   'Bv. Orono 321', 'Centro', 'Santa Fe', 'Masculino', 'Blanca', 'RRHH'),
+  ('Valentina Garcia',   '28.789.012', 'valentina.garcia@empresa.com.ar','+54 9 381 5678 9012','1995-06-12',
+   'Av. Aconquija 1500', 'Yerba Buena', 'Tucuman', 'Femenino', 'Mestiza', 'FINANZAS');</code></pre>
+
+<h3><span class="step-num">2</span> Ejecutar Clasificacion Automatica</h3>
+<pre><code class="language-sql">USE ROLE ACCOUNTADMIN;
+
+CALL SYSTEM$CLASSIFY(
+  'EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES',
+  {'auto_tag': true}
+);</code></pre>
+
+<h3><span class="step-num">3</span> Revisar Resultados de la Clasificacion</h3>
+<pre><code class="language-sql">SELECT *
+FROM TABLE(
+  EMPRESA_DEMO_AR.INFORMATION_SCHEMA.TAG_REFERENCES_ALL_COLUMNS(
+    'EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES', 'TABLE'
+  )
+)
+WHERE TAG_NAME IN ('SEMANTIC_CATEGORY', 'PRIVACY_CATEGORY')
+ORDER BY COLUMN_NAME, TAG_NAME;</code></pre>
+
+<h3>Mapeo: Categorias Snowflake a Ley 25.326</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Columna</th><th>Semantic Category</th><th>Privacy Category</th><th>Categoria Ley 25.326</th></tr></thead>
+  <tbody>
+    <tr><td>NOMBRE</td><td>NAME</td><td>IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>DNI</td><td>NATIONAL_IDENTIFIER</td><td>IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>EMAIL</td><td>EMAIL</td><td>IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>TELEFONO</td><td>PHONE_NUMBER</td><td>IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>FECHA_NACIMIENTO</td><td>DATE_OF_BIRTH</td><td>QUASI_IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>DIRECCION</td><td>STREET_ADDRESS</td><td>IDENTIFIER</td><td>Dato Personal</td></tr>
+    <tr><td>GENERO</td><td>GENDER</td><td>QUASI_IDENTIFIER</td><td><strong>Dato Sensible</strong></td></tr>
+    <tr><td>ETNIA</td><td>ETHNICITY</td><td>QUASI_IDENTIFIER</td><td><strong>Dato Sensible</strong></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="info-box warn">
+  <strong>Atencion: Datos Sensibles (Art. 7)</strong>
+  Columnas como GENERO y ETNIA son datos sensibles bajo la Ley 25.326 y exigen proteccion reforzada. El Art. 7 prohibe la formacion de archivos que almacenen datos sensibles, salvo razones de interes general autorizadas por ley o con fines estadisticos/cientificos cuando no se pueda identificar al titular.
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 4 -->
+<h2 id="mod4"><span class="module-badge">Modulo 4</span> Tags Personalizados para Ley 25.326 <span class="ley-ref">Arts. 4, 5, 6</span></h2>
+
+<p>Ademas de los tags de sistema (clasificacion automatica), creamos tags personalizados para documentar metadatos exigidos por la Ley 25.326: base legal, finalidad, periodo de retencion, y responsables.</p>
+
+<h3><span class="step-num">1</span> Crear Tags Ley 25.326</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_DATA_STEWARD;
+USE SCHEMA LEY25326_GOVERNANCE.TAGS;
+
+CREATE OR REPLACE TAG LEY25326_DATA_CATEGORY
+  ALLOWED_VALUES
+    'DATO_PERSONAL',
+    'DATO_SENSIBLE',
+    'DATO_DISOCIADO',
+    'NO_PERSONAL'
+  COMMENT = 'Clasificacion del dato conforme Art. 2 de la Ley 25.326';
+
+CREATE OR REPLACE TAG LEY25326_BASE_LEGAL
+  ALLOWED_VALUES
+    'CONSENTIMIENTO',
+    'FUENTE_PUBLICA',
+    'OBLIGACION_LEGAL',
+    'LISTADOS_PUBLICOS',
+    'RELACION_CONTRACTUAL',
+    'OPERACIONES_FINANCIERAS'
+  COMMENT = 'Base legal para tratamiento conforme Art. 5 de la Ley 25.326';
+
+CREATE OR REPLACE TAG LEY25326_FINALIDAD
+  COMMENT = 'Descripcion de la finalidad del tratamiento (Art. 4.3)';
+
+CREATE OR REPLACE TAG LEY25326_RETENCION
+  COMMENT = 'Periodo de retencion en dias (Art. 4.7)';
+
+CREATE OR REPLACE TAG LEY25326_RESPONSABLE
+  COMMENT = 'Nombre del responsable del archivo (Art. 2)';
+
+CREATE OR REPLACE TAG LEY25326_USUARIO_DATOS
+  COMMENT = 'Nombre del usuario de datos que realiza el tratamiento (Art. 2)';</code></pre>
+
+<h3><span class="step-num">2</span> Aplicar Tags a Tablas (Herencia)</h3>
+<pre><code class="language-sql">ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES SET TAG
+  LEY25326_GOVERNANCE.TAGS.LEY25326_BASE_LEGAL    = 'CONSENTIMIENTO',
+  LEY25326_GOVERNANCE.TAGS.LEY25326_FINALIDAD     = 'Registro de clientes para prestacion de servicios',
+  LEY25326_GOVERNANCE.TAGS.LEY25326_RETENCION     = '1825',
+  LEY25326_GOVERNANCE.TAGS.LEY25326_RESPONSABLE   = 'Empresa Demo Argentina S.A.';
+
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  NOMBRE SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  DNI SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  EMAIL SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  TELEFONO SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  FECHA_NACIMIENTO SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  DIRECCION SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_PERSONAL';</code></pre>
+
+<h3><span class="step-num">3</span> Tags Especificos para Columnas Sensibles</h3>
+<pre><code class="language-sql">ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  GENERO SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_SENSIBLE';
+
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  ETNIA SET TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY = 'DATO_SENSIBLE';</code></pre>
+
+<h3><span class="step-num">4</span> Validacion de los Tags</h3>
+<pre><code class="language-sql">SELECT *
+FROM TABLE(
+  EMPRESA_DEMO_AR.INFORMATION_SCHEMA.TAG_REFERENCES_ALL_COLUMNS(
+    'EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES', 'TABLE'
+  )
+)
+WHERE TAG_DATABASE = 'LEY25326_GOVERNANCE'
+ORDER BY COLUMN_NAME, TAG_NAME;</code></pre>
+
+<div class="info-box">
+  <strong>Herencia de Tags y Tag-Based Masking</strong>
+  Los tags de metadatos (BASE_LEGAL, FINALIDAD, RETENCION, RESPONSABLE) se aplican a la tabla y son heredados por todas las columnas. El tag <code>LEY25326_DATA_CATEGORY</code> se aplica <strong>individualmente por columna</strong> para evitar que columnas no-PII (como DEPARTAMENTO, LOCALIDAD, PROVINCIA) sean enmascaradas por el tag-based masking del Modulo 5. Las columnas sensibles (GENERO, ETNIA) reciben <code>DATO_SENSIBLE</code>.
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 5 -->
+<h2 id="mod5"><span class="module-badge">Modulo 5</span> Politicas de Enmascaramiento Dinamico <span class="ley-ref">Arts. 9, 10</span></h2>
+
+<p>Las masking policies protegen datos personales en tiempo de consulta. El dato original permanece intacto en la tabla, pero usuarios no autorizados ven valores enmascarados.</p>
+
+<h3><span class="step-num">1</span> Crear Masking Policies por Tipo de Dato</h3>
+
+<details>
+  <summary>Enmascaramiento de DNI</summary>
+  <div>
+<pre><code class="language-sql">USE ROLE LEY25326_PRIVACY_ADMIN;
+
+CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_DNI
+  AS (val STRING) RETURNS STRING ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    WHEN IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN') THEN val
+    ELSE CONCAT(LEFT(val, 3), '***.', '***')
+  END
+  COMMENT = 'Enmascara DNI para roles no autorizados (Art. 9 Ley 25.326)';</code></pre>
+  </div>
+</details>
+
+<details>
+  <summary>Enmascaramiento de Email</summary>
+  <div>
+<pre><code class="language-sql">CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_EMAIL
+  AS (val STRING) RETURNS STRING ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    WHEN IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN') THEN val
+    ELSE REGEXP_REPLACE(val, '.+\\@', '*****@')
+  END
+  COMMENT = 'Enmascara parte local del email (Art. 9 Ley 25.326)';</code></pre>
+  </div>
+</details>
+
+<details>
+  <summary>Enmascaramiento de Telefono</summary>
+  <div>
+<pre><code class="language-sql">CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PHONE
+  AS (val STRING) RETURNS STRING ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    ELSE CONCAT('+54 9 ** **** ', RIGHT(val, 4))
+  END
+  COMMENT = 'Enmascara telefono conservando ultimos 4 digitos';</code></pre>
+  </div>
+</details>
+
+<details>
+  <summary>Enmascaramiento Generico (String, Number, Date)</summary>
+  <div>
+<pre><code class="language-sql">CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_STRING
+  AS (val STRING) RETURNS STRING ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    WHEN IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN') THEN val
+    ELSE '***PROTEGIDO***'
+  END;
+
+CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_NUMBER
+  AS (val NUMBER) RETURNS NUMBER ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    ELSE NULL
+  END;
+
+CREATE OR REPLACE MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_DATE
+  AS (val DATE) RETURNS DATE ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS') THEN val
+    ELSE DATE_FROM_PARTS(1900, 01, 01)
+  END;</code></pre>
+  </div>
+</details>
+
+<h3><span class="step-num">2</span> Aplicar Policies Directamente en las Columnas</h3>
+<pre><code class="language-sql">ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  DNI SET MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_DNI;
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  EMAIL SET MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_EMAIL;
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  TELEFONO SET MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PHONE;
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  FECHA_NACIMIENTO SET MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_DATE;</code></pre>
+
+<h3><span class="step-num">3</span> Tag-Based Masking (Enfoque Escalable)</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_PRIVACY_ADMIN;
+
+ALTER TAG LEY25326_GOVERNANCE.TAGS.LEY25326_DATA_CATEGORY SET
+  MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_STRING,
+  MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_NUMBER,
+  MASKING POLICY LEY25326_GOVERNANCE.POLICIES.MASK_PII_DATE;</code></pre>
+
+<div class="info-box">
+  <strong>Precedencia de Policies</strong>
+  Cuando una columna tiene <strong>ambas</strong> una masking policy directa y una tag-based masking policy, la policy directa tiene precedencia. Esto permite crear una proteccion generica via tags y refinamientos especificos por columna.
+</div>
+
+<h3><span class="step-num">4</span> Probar Enmascaramiento</h3>
+<pre><code class="language-sql">USE SECONDARY ROLES NONE;
+
+-- Como LEY25326_RESPONSABLE_DATOS: debe ver datos completos
+USE ROLE LEY25326_RESPONSABLE_DATOS;
+SELECT NOMBRE, DNI, EMAIL, TELEFONO, FECHA_NACIMIENTO
+FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES LIMIT 3;
+
+-- Como LEY25326_ANALYST: debe ver datos enmascarados
+USE ROLE LEY25326_ANALYST;
+SELECT NOMBRE, DNI, EMAIL, TELEFONO, FECHA_NACIMIENTO
+FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES LIMIT 3;
+-- Resultado esperado:
+-- NOMBRE: ***PROTEGIDO***
+-- DNI: 25.***.***
+-- EMAIL: *****@email.com.ar
+-- TELEFONO: +54 9 ** **** 5678
+-- FECHA_NACIMIENTO: 1900-01-01
+
+USE SECONDARY ROLES ALL;</code></pre>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 6 -->
+<h2 id="mod6"><span class="module-badge">Modulo 6</span> Row Access Policies <span class="ley-ref">Art. 4.3 (finalidad), Art. 9</span></h2>
+
+<p>Las Row Access Policies restringen cuales <strong>filas</strong> un usuario puede ver, implementando el principio de <strong>finalidad</strong> (Art. 4.3) &mdash; cada departamento solo accede a los datos necesarios para su proposito.</p>
+
+<h3><span class="step-num">1</span> Crear Tabla de Mapeo y Row Access Policy</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_PRIVACY_ADMIN;
+
+CREATE OR REPLACE TABLE LEY25326_GOVERNANCE.POLICIES.ACCESS_MAPPING (
+  ROLE_NAME STRING, DEPARTMENT STRING, ALLOWED_PURPOSE STRING, REGION STRING
+);
+
+INSERT INTO LEY25326_GOVERNANCE.POLICIES.ACCESS_MAPPING VALUES
+  ('RRHH_ANALYST',              'RRHH',      'GESTION_PERSONAL',  'ARGENTINA'),
+  ('MARKETING_ANALYST',         'MARKETING', 'CAMPANAS',          'ARGENTINA'),
+  ('FINANZAS_ANALYST',          'FINANZAS',  'FACTURACION',       'ARGENTINA'),
+  ('LEY25326_RESPONSABLE_DATOS','ALL',       'GOBERNANZA',        'ALL'),
+  ('LEY25326_PRIVACY_ADMIN',    'ALL',       'GOBERNANZA',        'ALL');
+
+CREATE OR REPLACE ROW ACCESS POLICY
+  LEY25326_GOVERNANCE.POLICIES.RAP_PURPOSE_LIMITATION
+  AS (department STRING) RETURNS BOOLEAN ->
+  IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS')
+  OR IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN')
+  OR EXISTS (
+    SELECT 1 FROM LEY25326_GOVERNANCE.POLICIES.ACCESS_MAPPING am
+    WHERE am.ROLE_NAME = CURRENT_ROLE()
+      AND (am.DEPARTMENT = department OR am.DEPARTMENT = 'ALL')
+  )
+  COMMENT = 'Limita acceso por departamento conforme principio de finalidad (Art. 4.3 Ley 25.326)';
+
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+  ADD ROW ACCESS POLICY LEY25326_GOVERNANCE.POLICIES.RAP_PURPOSE_LIMITATION
+  ON (DEPARTAMENTO);</code></pre>
+
+<h3><span class="step-num">2</span> Probar Filtrado por Departamento</h3>
+<pre><code class="language-sql">USE SECONDARY ROLES NONE;
+
+USE ROLE LEY25326_RESPONSABLE_DATOS;
+SELECT NOMBRE, DEPARTAMENTO FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES;
+-- Resultado: 5 registros (todos los departamentos)
+
+USE ROLE RRHH_ANALYST;
+SELECT NOMBRE, DEPARTAMENTO FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES;
+-- Resultado: 2 registros (Lucia Martinez y Santiago Fernandez - ambos RRHH)
+
+USE ROLE FINANZAS_ANALYST;
+SELECT NOMBRE, DEPARTAMENTO FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES;
+-- Resultado: 2 registros (Martin Lopez y Valentina Garcia)
+
+USE SECONDARY ROLES ALL;</code></pre>
+
+<div class="info-box">
+  <strong>Orden de Evaluacion</strong>
+  Snowflake evalua primero la Row Access Policy (filtrado de filas), luego las Projection Policies (bloqueo de columnas en el output), y por ultimo aplica las Masking Policies (enmascaramiento de valores). Esto significa que un RRHH_ANALYST vera solo 2 filas, y en esas filas los datos personales estaran enmascarados.
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 7 -->
+<h2 id="mod7"><span class="module-badge">Modulo 7</span> Politicas de Proyeccion (Projection Policies) <span class="ley-ref">Art. 4.1 (proporcionalidad), Art. 7</span></h2>
+
+<p>Las Projection Policies son la <strong>tercera capa de defensa</strong>. Mientras las masking policies transforman valores y las Row Access Policies filtran filas, las projection policies <strong>impiden que una columna aparezca en el resultado final</strong> &mdash; implementando el principio de <strong>proporcionalidad</strong> (Art. 4.1: datos adecuados, pertinentes y no excesivos) de la Ley 25.326.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Aspecto</th><th>Row Access Policy</th><th>Projection Policy</th><th>Masking Policy</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Que controla</strong></td><td>Cuales FILAS el usuario ve</td><td>Cuales COLUMNAS aparecen en el resultado</td><td>Como los VALORES aparecen</td></tr>
+    <tr><td><strong>Enforcement</strong></td><td>Filtra silenciosamente</td><td>FAIL (bloquea query) o NULLIFY (retorna NULL)</td><td>Transforma el valor</td></tr>
+    <tr><td><strong>Articulos Ley 25.326</strong></td><td>Art. 4.3 (Finalidad)</td><td>Art. 4.1 (Proporcionalidad) / Art. 7 (Sensibles)</td><td>Art. 9 (Seguridad) / Art. 10 (Confidencialidad)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="info-box">
+  <strong>Defensa en Profundidad &mdash; Orden de Evaluacion en Snowflake</strong><br>
+  <code>Capa 1: Row Access Policy</code> &rarr; filtra FILAS (quien ve cuales registros)<br>
+  <code>Capa 2: Projection Policy</code> &rarr; bloquea COLUMNAS en el output (quien ve cuales campos)<br>
+  <code>Capa 3: Masking Policy</code> &rarr; transforma VALORES visibles (como aparecen los datos)<br><br>
+  En la tabla CLIENTES, las tres capas estan activas simultaneamente.
+</div>
+
+<h3><span class="step-num">1</span> Crear y Aplicar Projection Policies</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_PRIVACY_ADMIN;
+
+-- FAIL para datos sensibles (GENERO, ETNIA)
+CREATE OR REPLACE PROJECTION POLICY LEY25326_GOVERNANCE.POLICIES.PROJ_SENSITIVE_BLOCK
+  AS () RETURNS PROJECTION_CONSTRAINT ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS')
+      THEN PROJECTION_CONSTRAINT(ALLOW => true)
+    WHEN IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN')
+      THEN PROJECTION_CONSTRAINT(ALLOW => true)
+    ELSE PROJECTION_CONSTRAINT(ALLOW => false)
+  END
+  COMMENT = 'Bloquea proyeccion de datos sensibles (Art. 7 Ley 25.326)';
+
+-- NULLIFY para PII general (DIRECCION)
+CREATE OR REPLACE PROJECTION POLICY LEY25326_GOVERNANCE.POLICIES.PROJ_PII_NULLIFY
+  AS () RETURNS PROJECTION_CONSTRAINT ->
+  CASE
+    WHEN IS_ROLE_IN_SESSION('LEY25326_RESPONSABLE_DATOS')
+      THEN PROJECTION_CONSTRAINT(ALLOW => true)
+    WHEN IS_ROLE_IN_SESSION('LEY25326_PRIVACY_ADMIN')
+      THEN PROJECTION_CONSTRAINT(ALLOW => true)
+    ELSE PROJECTION_CONSTRAINT(ALLOW => false, ENFORCEMENT => 'NULLIFY')
+  END
+  COMMENT = 'Retorna NULL para columnas PII no autorizadas (Art. 4.1 Ley 25.326)';
+
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  GENERO SET PROJECTION POLICY LEY25326_GOVERNANCE.POLICIES.PROJ_SENSITIVE_BLOCK;
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  ETNIA SET PROJECTION POLICY LEY25326_GOVERNANCE.POLICIES.PROJ_SENSITIVE_BLOCK;
+ALTER TABLE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES MODIFY COLUMN
+  DIRECCION SET PROJECTION POLICY LEY25326_GOVERNANCE.POLICIES.PROJ_PII_NULLIFY;</code></pre>
+
+<h3><span class="step-num">2</span> Validacion de las Projection Policies</h3>
+<pre><code class="language-sql">USE SECONDARY ROLES NONE;
+
+USE ROLE LEY25326_RESPONSABLE_DATOS;
+SELECT NOMBRE, GENERO, ETNIA, DIRECCION
+FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES LIMIT 3;
+
+USE ROLE LEY25326_ANALYST;
+-- Este query FALLA (descomente para probar):
+-- SELECT GENERO FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES LIMIT 1;
+
+SELECT NOMBRE, DIRECCION FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES LIMIT 3;
+-- Resultado esperado: NOMBRE = ***PROTEGIDO*** (masking), DIRECCION = NULL (projection)
+
+USE SECONDARY ROLES ALL;</code></pre>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 8 -->
+<h2 id="mod8"><span class="module-badge">Modulo 8</span> Derechos del Titular (ARCO) <span class="ley-ref">Arts. 14, 16</span></h2>
+
+<p>Los Arts. 14 y 16 de la Ley 25.326 garantizan al titular derechos sobre sus datos, conocidos como derechos <strong>ARCO</strong> (Acceso, Rectificacion, Cancelacion/Supresion, Oposicion). Implementamos cada derecho como un stored procedure con auditoria automatica.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Derecho</th><th>Articulo</th><th>SLA</th><th>Procedure</th></tr></thead>
+  <tbody>
+    <tr><td>Acceso</td><td>Art. 14</td><td>10 dias corridos</td><td><code>ARCO_ACCESS</code></td></tr>
+    <tr><td>Rectificacion</td><td>Art. 16.1</td><td>5 dias habiles</td><td><code>ARCO_CORRECTION</code></td></tr>
+    <tr><td>Supresion</td><td>Art. 16.1</td><td>5 dias habiles</td><td><code>ARCO_DELETE</code></td></tr>
+    <tr><td>Oposicion/Bloqueo</td><td>Art. 16.6</td><td>--</td><td>Proceso organizacional</td></tr>
+    <tr><td>Portabilidad</td><td>Buena practica</td><td>--</td><td><code>ARCO_PORTABILITY</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3><span class="step-num">1</span> Crear Tabla de Auditoria ARCO</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_RESPONSABLE_DATOS;
+
+CREATE OR REPLACE TABLE LEY25326_GOVERNANCE.AUDIT.ARCO_LOG (
+  REQUEST_ID    STRING DEFAULT UUID_STRING(),
+  REQUEST_TYPE  STRING,
+  TITULAR_ID    STRING    COMMENT 'DNI o identificador del titular',
+  REQUESTED_BY  STRING DEFAULT CURRENT_USER(),
+  REQUESTED_AT  TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),
+  STATUS        STRING DEFAULT 'PENDIENTE',
+  COMPLETED_AT  TIMESTAMP_LTZ,
+  DETAILS       VARIANT
+)
+COMMENT = 'Log de solicitudes de derechos del titular (Arts. 14, 16 Ley 25.326)';</code></pre>
+
+<h3><span class="step-num">2</span> Derecho de Acceso (Art. 14)</h3>
+<pre><code class="language-sql">CREATE OR REPLACE PROCEDURE LEY25326_GOVERNANCE.AUDIT.ARCO_ACCESS(
+  TITULAR_DNI STRING
+)
+RETURNS TABLE()
+LANGUAGE SQL
+AS
+$$
+BEGIN
+  INSERT INTO LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+    (REQUEST_TYPE, TITULAR_ID, STATUS, COMPLETED_AT)
+  VALUES ('ACCESO', :TITULAR_DNI, 'CONCLUIDO', CURRENT_TIMESTAMP());
+
+  LET rs RESULTSET := (
+    SELECT ID, NOMBRE, DNI, EMAIL, TELEFONO, FECHA_NACIMIENTO,
+           DIRECCION, LOCALIDAD, PROVINCIA, FECHA_REGISTRO
+    FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+    WHERE DNI = :TITULAR_DNI
+  );
+  RETURN TABLE(rs);
+END;
+$$;</code></pre>
+
+<h3><span class="step-num">3</span> Derecho de Rectificacion (Art. 16)</h3>
+<pre><code class="language-sql">CREATE OR REPLACE PROCEDURE LEY25326_GOVERNANCE.AUDIT.ARCO_CORRECTION(
+  TITULAR_DNI STRING, CAMPO STRING, NUEVO_VALOR STRING
+)
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+BEGIN
+  INSERT INTO LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+    (REQUEST_TYPE, TITULAR_ID, DETAILS)
+  SELECT 'RECTIFICACION', :TITULAR_DNI,
+     OBJECT_CONSTRUCT('campo', :CAMPO, 'nuevo_valor', :NUEVO_VALOR);
+
+  IF (:CAMPO = 'EMAIL') THEN
+    UPDATE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+    SET EMAIL = :NUEVO_VALOR WHERE DNI = :TITULAR_DNI;
+  ELSEIF (:CAMPO = 'TELEFONO') THEN
+    UPDATE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+    SET TELEFONO = :NUEVO_VALOR WHERE DNI = :TITULAR_DNI;
+  ELSEIF (:CAMPO = 'DIRECCION') THEN
+    UPDATE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+    SET DIRECCION = :NUEVO_VALOR WHERE DNI = :TITULAR_DNI;
+  ELSE
+    RETURN 'Error: Campo no permitido para rectificacion via ARCO.';
+  END IF;
+
+  UPDATE LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+  SET STATUS = 'CONCLUIDO', COMPLETED_AT = CURRENT_TIMESTAMP()
+  WHERE TITULAR_ID = :TITULAR_DNI AND REQUEST_TYPE = 'RECTIFICACION' AND STATUS = 'PENDIENTE';
+
+  RETURN CONCAT('Campo ', :CAMPO, ' rectificado con exito para el titular ', :TITULAR_DNI);
+END;
+$$;</code></pre>
+
+<h3><span class="step-num">4</span> Derecho de Supresion / Disociacion (Art. 16)</h3>
+<pre><code class="language-sql">CREATE OR REPLACE PROCEDURE LEY25326_GOVERNANCE.AUDIT.ARCO_DELETE(
+  TITULAR_DNI STRING
+)
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+BEGIN
+  LET cnt NUMBER := (
+    SELECT COUNT(*) FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES WHERE DNI = :TITULAR_DNI
+  );
+  IF (:cnt = 0) THEN RETURN 'Error: Titular no encontrado.'; END IF;
+
+  UPDATE EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+  SET NOMBRE = 'DISOCIADO', DNI = 'XX.XXX.XXX',
+      EMAIL = CONCAT('disociado_', ID, '@removed.ley25326'),
+      TELEFONO = '+54 9 00 0000 0000', FECHA_NACIMIENTO = DATE_FROM_PARTS(1900,01,01),
+      DIRECCION = 'ELIMINADO', LOCALIDAD = 'ELIMINADO', PROVINCIA = 'XX',
+      GENERO = NULL, ETNIA = NULL
+  WHERE DNI = :TITULAR_DNI;
+
+  INSERT INTO LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+    (REQUEST_TYPE, TITULAR_ID, STATUS, COMPLETED_AT)
+  VALUES ('SUPRESION', :TITULAR_DNI, 'CONCLUIDO', CURRENT_TIMESTAMP());
+
+  RETURN CONCAT('Datos del titular ', :TITULAR_DNI, ' disociados con exito.');
+END;
+$$;</code></pre>
+
+<h3><span class="step-num">5</span> Portabilidad (Buena Practica)</h3>
+<pre><code class="language-sql">CREATE STAGE IF NOT EXISTS EMPRESA_DEMO_AR.DATOS_CLIENTES.ARCO_EXPORT
+  COMMENT = 'Stage para exportacion de datos en solicitudes del titular';
+
+CREATE OR REPLACE PROCEDURE LEY25326_GOVERNANCE.AUDIT.ARCO_PORTABILITY(
+  TITULAR_DNI STRING
+)
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+BEGIN
+  COPY INTO @EMPRESA_DEMO_AR.DATOS_CLIENTES.ARCO_EXPORT/portabilidad/
+  FROM (
+    SELECT ID, NOMBRE, DNI, EMAIL, TELEFONO, FECHA_NACIMIENTO,
+           DIRECCION, LOCALIDAD, PROVINCIA, FECHA_REGISTRO
+    FROM EMPRESA_DEMO_AR.DATOS_CLIENTES.CLIENTES
+    WHERE DNI = :TITULAR_DNI
+  )
+  FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"')
+  OVERWRITE = TRUE SINGLE = TRUE HEADER = TRUE;
+
+  INSERT INTO LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+    (REQUEST_TYPE, TITULAR_ID, STATUS, COMPLETED_AT)
+  VALUES ('PORTABILIDAD', :TITULAR_DNI, 'CONCLUIDO', CURRENT_TIMESTAMP());
+
+  RETURN CONCAT('Datos exportados a @ARCO_EXPORT/portabilidad/ para el titular ', :TITULAR_DNI);
+END;
+$$;</code></pre>
+
+<h3><span class="step-num">6</span> Probar Procedimientos ARCO</h3>
+<pre><code class="language-sql">CALL LEY25326_GOVERNANCE.AUDIT.ARCO_ACCESS('25.678.901');
+
+CALL LEY25326_GOVERNANCE.AUDIT.ARCO_CORRECTION(
+  '25.678.901', 'EMAIL', 'lucia.nueva@email.com.ar'
+);
+
+CALL LEY25326_GOVERNANCE.AUDIT.ARCO_PORTABILITY('30.456.789');
+
+SELECT * FROM LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+ORDER BY REQUESTED_AT DESC;</code></pre>
+
+<div class="info-box warn">
+  <strong>Plazos Legales</strong>
+  La Ley 25.326 establece dos plazos distintos: <strong>10 dias corridos</strong> para el derecho de acceso (Art. 14, inc. 2) y <strong>5 dias habiles</strong> para rectificacion, actualizacion o supresion (Art. 16, inc. 2). Configure alertas para monitorear solicitudes pendientes.
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- MODULE 9 -->
+<h2 id="mod9"><span class="module-badge">Modulo 9</span> Monitoreo, Auditoria y Cumplimiento <span class="ley-ref">Arts. 9, 29, 31</span></h2>
+
+<p>El monitoreo continuo es esencial para demostrar cumplimiento con la Ley 25.326. Este modulo cubre auditoria de acceso, reportes de cobertura, y alertas para incidentes de seguridad.</p>
+
+<h3><span class="step-num">1</span> Auditoria de Acceso a Datos Personales</h3>
+<pre><code class="language-sql">USE ROLE ACCOUNTADMIN;
+
+SELECT
+  ah.USER_NAME, qh.ROLE_NAME, ah.QUERY_START_TIME,
+  boa.VALUE:objectName::STRING AS OBJECT_ACCESSED,
+  boa.VALUE:objectDomain::STRING AS OBJECT_TYPE, ah.QUERY_ID
+FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah
+  JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.QUERY_ID = qh.QUERY_ID
+  ,LATERAL FLATTEN(input => ah.BASE_OBJECTS_ACCESSED) boa
+WHERE ah.QUERY_START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+  AND boa.VALUE:objectName::STRING ILIKE '%CLIENTES%'
+ORDER BY ah.QUERY_START_TIME DESC LIMIT 100;</code></pre>
+
+<h3><span class="step-num">2</span> Reporte de Cobertura de Tags Ley 25.326</h3>
+<pre><code class="language-sql">SELECT
+  t.TABLE_CATALOG AS DATABASE_NAME, t.TABLE_SCHEMA AS SCHEMA_NAME,
+  t.TABLE_NAME, t.ROW_COUNT,
+  COALESCE(tr.TAG_VALUE, '*** SIN TAG ***') AS LEY25326_CATEGORY,
+  CASE WHEN tr.TAG_VALUE IS NOT NULL THEN 'CONFORME' ELSE 'PENDIENTE'
+  END AS STATUS_CUMPLIMIENTO
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES t
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES tr
+  ON t.TABLE_CATALOG = tr.OBJECT_DATABASE AND t.TABLE_SCHEMA = tr.OBJECT_SCHEMA
+  AND t.TABLE_NAME = tr.OBJECT_NAME AND tr.TAG_NAME = 'LEY25326_DATA_CATEGORY' AND tr.DOMAIN = 'TABLE'
+WHERE t.DELETED IS NULL AND t.TABLE_SCHEMA != 'INFORMATION_SCHEMA'
+ORDER BY STATUS_CUMPLIMIENTO DESC;</code></pre>
+
+<h3><span class="step-num">3</span> Monitorear Solicitudes ARCO Pendientes</h3>
+<pre><code class="language-sql">USE ROLE LEY25326_RESPONSABLE_DATOS;
+
+SELECT REQUEST_ID, REQUEST_TYPE, TITULAR_ID, REQUESTED_AT, STATUS,
+  DATEDIFF('day', REQUESTED_AT, CURRENT_TIMESTAMP()) AS DIAS_ABIERTO,
+  CASE
+    WHEN REQUEST_TYPE = 'ACCESO' AND DATEDIFF('day', REQUESTED_AT, CURRENT_TIMESTAMP()) > 10
+      THEN 'ATRASADO'
+    WHEN REQUEST_TYPE = 'ACCESO' AND DATEDIFF('day', REQUESTED_AT, CURRENT_TIMESTAMP()) > 7
+      THEN 'ATENCION'
+    WHEN REQUEST_TYPE != 'ACCESO' AND DATEDIFF('day', REQUESTED_AT, CURRENT_TIMESTAMP()) > 5
+      THEN 'ATRASADO'
+    WHEN REQUEST_TYPE != 'ACCESO' AND DATEDIFF('day', REQUESTED_AT, CURRENT_TIMESTAMP()) > 3
+      THEN 'ATENCION'
+    ELSE 'DENTRO DEL PLAZO'
+  END AS SLA_STATUS
+FROM LEY25326_GOVERNANCE.AUDIT.ARCO_LOG
+WHERE STATUS = 'PENDIENTE'
+ORDER BY REQUESTED_AT ASC;</code></pre>
+
+<h3><span class="step-num">4</span> Alerta para Acceso Masivo a Datos Personales</h3>
+<pre><code class="language-sql">USE ROLE ACCOUNTADMIN;
+CREATE OR REPLACE NOTIFICATION INTEGRATION LEY25326_NOTIFICATIONS
+  TYPE = EMAIL ENABLED = TRUE
+  ALLOWED_RECIPIENTS = ($LEY25326_DPO_EMAIL);
+
+USE ROLE LEY25326_RESPONSABLE_DATOS;
+
+CREATE OR REPLACE ALERT LEY25326_GOVERNANCE.AUDIT.ALERT_MASS_DATA_ACCESS
+  WAREHOUSE = LEY25326_TRAINING_WH
+  SCHEDULE = 'USING CRON 0 */6 * * * America/Argentina/Buenos_Aires'
+  IF (EXISTS (
+    SELECT 1 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+    WHERE EXECUTION_STATUS = 'SUCCESS' AND ROWS_PRODUCED > 10000
+      AND QUERY_START_TIME >= DATEADD('hour', -6, CURRENT_TIMESTAMP())
+      AND (QUERY_TEXT ILIKE '%clientes%' OR QUERY_TEXT ILIKE '%datos_personales%')
+  ))
+  THEN
+    CALL SYSTEM$SEND_EMAIL(
+      'LEY25326_NOTIFICATIONS', $LEY25326_DPO_EMAIL,
+      'ALERTA LEY 25.326: Acceso masivo a datos personales detectado',
+      'Una consulta retorno mas de 10,000 registros de tablas con datos personales en las ultimas 6 horas. Verifique el ACCESS_HISTORY para detalles.'
+    );
+
+ALTER ALERT LEY25326_GOVERNANCE.AUDIT.ALERT_MASS_DATA_ACCESS RESUME;</code></pre>
+
+<h3><span class="step-num">5</span> Governance Dashboard en Snowsight</h3>
+<div class="info-box">
+  <strong>Acceso via Snowsight</strong>
+  El Responsable de Proteccion de Datos puede acceder al <strong>Governance Dashboard</strong> en Snowsight en:
+  <br/><code>Governance &amp; Security &rarr; Tags &amp; Policies</code>
+  <br/>Este dashboard muestra:
+  <ul style="margin:4px 0 0; padding-left:18px;">
+    <li><strong>Coverage:</strong> porcentaje de tablas/columnas con tags y policies</li>
+    <li><strong>Prevalence:</strong> tags y policies mas utilizados</li>
+    <li><strong>Tagged Objects:</strong> lista detallada de objetos protegidos</li>
+  </ul>
+  <br/>Requisitos: role con <code>SNOWFLAKE.GOVERNANCE_VIEWER</code> y <code>SNOWFLAKE.OBJECT_VIEWER</code> (ya concedidos al LEY25326_RESPONSABLE_DATOS en Modulo 2).
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- GLOSSARY -->
+<h2 id="glossary"><span class="module-badge">Ref.</span> Glosario Ley 25.326</h2>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Termino</th><th>Articulo</th><th>Definicion</th></tr></thead>
+  <tbody>
+    <tr><td class="glossary-term">AAIP</td><td>Art. 29</td><td>Agencia de Acceso a la Informacion Publica: organo de control encargado de fiscalizar el cumplimiento de la ley</td></tr>
+    <tr><td class="glossary-term">ARCO</td><td>Arts. 14, 16</td><td>Derechos de Acceso, Rectificacion, Cancelacion/Supresion y Oposicion del titular</td></tr>
+    <tr><td class="glossary-term">Dato Personal</td><td>Art. 2</td><td>Informacion de cualquier tipo referida a personas fisicas o de existencia ideal determinadas o determinables</td></tr>
+    <tr><td class="glossary-term">Dato Sensible</td><td>Art. 2</td><td>Dato que revela origen racial/etnico, opiniones politicas, convicciones religiosas/filosoficas/morales, afiliacion sindical, salud o vida sexual</td></tr>
+    <tr><td class="glossary-term">Disociacion de Datos</td><td>Art. 2</td><td>Tratamiento de datos de manera que la informacion no pueda asociarse a persona determinada o determinable</td></tr>
+    <tr><td class="glossary-term">Habeas Data</td><td>Arts. 33-43</td><td>Accion judicial de proteccion de datos personales, basada en el Art. 43 de la Constitucion Nacional</td></tr>
+    <tr><td class="glossary-term">Responsable del Archivo</td><td>Art. 2</td><td>Persona fisica o de existencia ideal titular de un archivo, registro o banco de datos</td></tr>
+    <tr><td class="glossary-term">Titular de los Datos</td><td>Art. 2</td><td>Persona cuyos datos personales son objeto de tratamiento</td></tr>
+    <tr><td class="glossary-term">Transferencia Internacional</td><td>Art. 12</td><td>Transferencia de datos a paises u organismos que no proporcionen niveles de proteccion adecuados (prohibida con excepciones)</td></tr>
+    <tr><td class="glossary-term">Usuario de Datos</td><td>Art. 2</td><td>Persona que realiza el tratamiento de datos en archivos propios o a traves de conexion con los mismos</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- REFERENCE TABLE -->
+<h2 id="ref-table"><span class="module-badge">Ref.</span> Tabla: Ley 25.326 &rarr; Snowflake</h2>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Articulo</th><th>Requisito</th><th>Recurso Snowflake</th><th>Modulo</th></tr></thead>
+  <tbody>
+    <tr><td>Art. 2</td><td>Definicion de datos personales y sensibles</td><td>CLASSIFY, System Tags (SEMANTIC_CATEGORY)</td><td><a href="#mod3">3</a></td></tr>
+    <tr><td>Art. 3</td><td>Licitud de los archivos de datos</td><td>Governance Database, Tags de metadatos</td><td><a href="#mod2">2</a>, <a href="#mod4">4</a></td></tr>
+    <tr><td>Art. 4.1</td><td>Datos adecuados, pertinentes y no excesivos</td><td>Projection Policies, Masking Policies</td><td><a href="#mod5">5</a>, <a href="#mod7">7</a></td></tr>
+    <tr><td>Art. 4.3</td><td>Finalidad del tratamiento</td><td>Row Access Policies + Mapping Table</td><td><a href="#mod6">6</a></td></tr>
+    <tr><td>Art. 4.4</td><td>Datos exactos y actualizados</td><td>Procedimiento ARCO_CORRECTION</td><td><a href="#mod8">8</a></td></tr>
+    <tr><td>Art. 4.7</td><td>Destruccion cuando innecesarios</td><td>Tag LEY25326_RETENCION + ARCO_DELETE</td><td><a href="#mod4">4</a>, <a href="#mod8">8</a></td></tr>
+    <tr><td>Art. 5</td><td>Consentimiento y bases legales</td><td>Tag LEY25326_BASE_LEGAL con ALLOWED_VALUES</td><td><a href="#mod4">4</a></td></tr>
+    <tr><td>Art. 7</td><td>Proteccion reforzada de datos sensibles</td><td>Tag DATO_SENSIBLE + Projection Policy FAIL</td><td><a href="#mod4">4</a>, <a href="#mod7">7</a></td></tr>
+    <tr><td>Art. 9</td><td>Seguridad de los datos</td><td>Encryption (AES-256/TLS), RBAC, Masking, RAP</td><td><a href="#mod2">2</a>, <a href="#mod5">5</a></td></tr>
+    <tr><td>Art. 10</td><td>Deber de confidencialidad</td><td>Masking Policies, Row Access Policies</td><td><a href="#mod5">5</a>, <a href="#mod6">6</a></td></tr>
+    <tr><td>Art. 12</td><td>Transferencia internacional</td><td>Network Rules, Region Selection</td><td><a href="#mod1">1</a></td></tr>
+    <tr><td>Art. 14</td><td>Derecho de acceso (10 dias corridos)</td><td>ARCO_ACCESS + SLA monitoring</td><td><a href="#mod8">8</a>, <a href="#mod9">9</a></td></tr>
+    <tr><td>Art. 16</td><td>Rectificacion, actualizacion, supresion (5 dias habiles)</td><td>ARCO_CORRECTION, ARCO_DELETE + SLA monitoring</td><td><a href="#mod8">8</a>, <a href="#mod9">9</a></td></tr>
+    <tr><td>Art. 29</td><td>Organo de control (AAIP)</td><td>Governance Dashboard, Trust Center</td><td><a href="#mod9">9</a></td></tr>
+    <tr><td>Art. 31</td><td>Sanciones administrativas</td><td>Audit logs, Alertas automaticas</td><td><a href="#mod9">9</a></td></tr>
+  </tbody>
+</table>
+</div>
+
+<a href="#top" class="back-to-top">&uarr; Volver al inicio</a>
+
+<!-- FOOTER -->
+<footer>
+  <p><strong>Ley 25.326 + Snowflake: Guia de Cumplimiento</strong></p>
+  <p>Este material se proporciona con fines educativos. Consulte a su equipo legal para validar el cumplimiento de la Ley 25.326 aplicable a su organizacion.</p>
+  <p>Snowflake &bull; Enterprise Edition &bull; Generado en Octubre 2026</p>
+</footer>
+
+</main>
+
+<script src="/libs/highlight.js@11.10.0/highlight.min.js"></script>
+<script src="/libs/mermaid@10.9.6/mermaid.min.js"></script>
+<script>
+  document.querySelectorAll('pre code').forEach(function(block) {
+    hljs.highlightElement(block);
+  });
+
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: 'strict',
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'
+  });
+
+  document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+      var targetId = this.getAttribute('href').substring(1);
+      var target = document.getElementById(targetId);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.sidebar nav a'));
+    var targets = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    function onScroll() {
+      var idx = -1, y = window.scrollY + 120;
+      for (var i = 0; i < targets.length; i++) {
+        if (targets[i] && targets[i].offsetTop <= y) idx = i;
+      }
+      links.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
